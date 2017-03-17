@@ -39,7 +39,7 @@ gitlab_project_build_time = Summary('gitlab_project_build_time', 'Time the proje
 
 
 def get_projects():
-    projects = gl.projects.list()
+    projects = gl.projects.list(all=True)
     return projects
 
 
