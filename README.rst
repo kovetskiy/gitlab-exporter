@@ -9,26 +9,14 @@ Getting Started
 ===============
 Get your personal access token from
 ``https://git.example.com/profile/personal_access_tokens``
-and create a Gitlab config as described `here
-<http://python-gitlab.readthedocs.io/en/stable/cli.html#configuration>`__,
-e.g.::
-
-    cat <<EOF > ~/.python-gitlab.cfg
-    [global]
-    default = example
-    timeout = 5
-
-    [example]
-    url = https://git.example.com/
-    private_token = ********************
-    EOF
 
 Run with Docker::
 
     docker run --rm -it \
-    -v ~/.python-gitlab.cfg:/home/monitor/.python-gitlab.cfg \
     -p 3001:3001 \
-    felix/gitlab-prometheus-exporter
+    -e URL=$YOUR_GITLAB_URL
+    -e TOKEN=$YOUR_GITLAB_TOKEN
+    nomaster/gitlab-exporter
 
 Install from Git
 ----------------
@@ -57,6 +45,8 @@ Environment Variable  Description
 LOGLEVEL              Standard Python `log level`_
 PORT                  Port to listen on
 INTERVAL              Interval in seconds to wait between data fetches
+URL                   URL to your GitLab installation
+TOKEN                 Your personal access token for the GitLab API
 ====================  ===========
 
 .. _log level: https://docs.python.org/3.5/library/logging.html#levels
