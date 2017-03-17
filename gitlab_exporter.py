@@ -35,7 +35,7 @@ gl = gitlab.Gitlab(URL, TOKEN)
 gl.auth()
 
 # Initialize Prometheus instrumentation
-gitlab_project_build_time = Summary('gitlab_project_build_time', 'Time the project builds took to run', ['project_id'])
+gitlab_project_build_time = Summary('gitlab_project_build_time', 'Time the project builds took to run', ['project_id', 'stage', 'status'])
 
 
 def get_projects():
@@ -65,7 +65,7 @@ def get_stats():
         for build in get_project_builds(project):
             try:
                 build_time = get_build_time(build)
-                gitlab_project_build_time.labels(project_id=project.id).observe(build_time.total_seconds())
+                gitlab_project_build_time.labels(project_id=project.id, stage=build.stage, status=build.status).observe(build_time.total_seconds())
             except AttributeError:
                 pass
 
