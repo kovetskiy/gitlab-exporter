@@ -39,7 +39,7 @@ projects_total = Gauge('gitlab_projects_total', 'Number of projects')
 builds_total = Gauge('gitlab_builds_total', 'Number of builds', ['project_id', 'project_name'])
 build_duration_seconds = Summary('gitlab_build_duration_seconds', 'Seconds the build took to run', ['project_id', 'project_name', 'stage', 'status'])
 open_issues_total = Gauge('gitlab_open_issues_total', 'Number of open issues', ['project_id', 'project_name'])
-pipeline_duration_seconds = Summary('gitlab_pipeline_duration_seconds', 'Seconds the pipeline took to run', ['project_id', 'project_name', 'status'])
+pipeline_duration_seconds = Summary('gitlab_pipeline_duration_seconds', 'Seconds the pipeline took to run', ['project_id', 'project_name', 'status', 'ref'])
 
 
 def get_projects():
@@ -80,7 +80,7 @@ def get_stats():
         for pipeline in get_pipelines(project):
             try:
                 duration = get_duration(pipeline)
-                summary = pipeline_duration_seconds.labels(project_id=project.id, project_name=project.name, status=pipeline.status)
+                summary = pipeline_duration_seconds.labels(project_id=project.id, project_name=project.name, status=pipeline.status, ref=pipeline.ref)
                 summary.observe(duration.total_seconds())
             except AttributeError:
                 pass
