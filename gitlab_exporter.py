@@ -37,7 +37,7 @@ gl.auth()
 # Initialize Prometheus instrumentation
 projects_total = Gauge('gitlab_projects_total', 'Number of projects')
 builds_total = Gauge('gitlab_builds_total', 'Number of builds', ['project_id', 'project_name'])
-build_duration_seconds = Summary('gitlab_build_duration_seconds', 'Seconds the build took to run', ['project_id', 'project_name', 'stage', 'status'])
+build_duration_seconds = Summary('gitlab_build_duration_seconds', 'Seconds the build took to run', ['project_id', 'project_name', 'stage', 'status', 'ref'])
 open_issues_total = Gauge('gitlab_open_issues_total', 'Number of open issues', ['project_id', 'project_name'])
 pipeline_duration_seconds = Summary('gitlab_pipeline_duration_seconds', 'Seconds the pipeline took to run', ['project_id', 'project_name', 'status', 'ref'])
 
@@ -87,7 +87,7 @@ def get_stats():
         for build in get_builds(project):
             try:
                 duration = get_duration(build)
-                summary = build_duration_seconds.labels(project_id=project.id, project_name=project.name, stage=build.stage, status=build.status)
+                summary = build_duration_seconds.labels(project_id=project.id, project_name=project.name, stage=build.stage, status=build.status, ref=pipeline.ref)
                 summary.observe(duration.total_seconds())
             except AttributeError:
                 pass
