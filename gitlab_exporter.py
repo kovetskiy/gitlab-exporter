@@ -43,13 +43,22 @@ pipeline_duration_seconds = Summary('gitlab_pipeline_duration_seconds', 'Seconds
 
 
 def get_projects():
-    projects = gl.projects.list(all=True)
-    return projects
-
+    try:
+        projects = gl.projects.list(all=True)
+        log.debug("Projects: {}".format(projects))
+        return projects
+    except gitlab.exceptions.GitlabListError:
+        log.warn("Projects could not be retrieved")
+        return []
 
 def get_builds(project):
-    builds = project.builds.list()
-    return builds
+    try:
+        builds = project.builds.list(all=True)
+        log.debug("Builds: {}".format(builds))
+        return builds
+    except gitlab.exceptions.GitlabListError:
+        log.warn("Builds could not be retrieved")
+        return []
 
 
 def get_duration(process):
@@ -64,9 +73,11 @@ def get_duration(process):
 
 def get_pipelines(project):
     try:
-        pipelines = project.pipelines.list()
+        pipelines = project.pipelines.list(all=True)
+        log.debug("Pipelines: {}".format(pipelines))
         return pipelines
     except gitlab.exceptions.GitlabListError:
+        log.warn("Pipelines could not be retrieved")
         return []
 
 
@@ -75,6 +86,7 @@ def get_stats():
     projects_total.set(len(projects))
     for project in projects:
         project = gl.projects.get(project.id)
+        log.debug("Project: {}".format(project))
         builds_total.labels(project_id=project.id, project_name=project.name).set(len(project.builds.list()))
         open_issues_total.labels(project_id=project.id, project_name=project.name).set(project.open_issues_count)
         for pipeline in get_pipelines(project):
