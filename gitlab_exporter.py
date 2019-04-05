@@ -30,16 +30,33 @@ URL = str(os.environ.get('URL', 'https://gitlab.com'))
 # Secret token for the app to authenticate itself
 TOKEN = str(os.environ.get('TOKEN'))
 
+# Secret token for the app to authenticate itself
+VERSION = int(os.environ.get('VERSION', 4))
+
 # Login to GitLab
-gl = gitlab.Gitlab(URL, TOKEN)
+gl = gitlab.Gitlab(URL, TOKEN, api_version=VERSION)
 gl.auth()
 
 # Initialize Prometheus instrumentation
-projects_total = Gauge('gitlab_projects_total', 'Number of projects')
-builds_total = Gauge('gitlab_builds_total', 'Number of builds', ['project_id', 'project_name'])
-build_duration_seconds = Summary('gitlab_build_duration_seconds', 'Seconds the build took to run', ['project_id', 'project_name', 'stage', 'status', 'ref'])
-open_issues_total = Gauge('gitlab_open_issues_total', 'Number of open issues', ['project_id', 'project_name'])
-pipeline_duration_seconds = Summary('gitlab_pipeline_duration_seconds', 'Seconds the pipeline took to run', ['project_id', 'project_name', 'status', 'ref'])
+projects_total = Gauge(
+    'gitlab_projects_total',
+    'Number of projects'
+)
+jobs_total = Gauge(
+    'gitlab_jobs_total',
+    'Number of jobs',
+    ['namespace', 'project_id', 'project_name']
+)
+job_duration_seconds = Summary(
+    'gitlab_job_duration_seconds',
+    'Seconds the job took to run',
+    ['namespace', 'project_id', 'project_name', 'stage', 'status', 'ref']
+)
+pipeline_duration_seconds = Summary(
+    'gitlab_pipeline_duration_seconds',
+    'Seconds the pipeline took to run',
+    ['namespace', 'project_id', 'project_name', 'status', 'ref']
+)
 
 
 def get_projects():
@@ -51,13 +68,13 @@ def get_projects():
         log.warn("Projects could not be retrieved")
         return []
 
-def get_builds(project):
+def get_jobs(project):
     try:
-        builds = project.builds.list(all=True)
-        log.debug("Builds: {}".format(builds))
-        return builds
+        jobs = project.jobs.list(all=True)
+        log.debug("jobs: {}".format(jobs))
+        return jobs
     except gitlab.exceptions.GitlabListError:
-        log.warn("Builds could not be retrieved")
+        log.warn("jobs could not be retrieved")
         return []
 
 
@@ -84,22 +101,52 @@ def get_pipelines(project):
 def get_stats():
     projects = get_projects()
     projects_total.set(len(projects))
+
     for project in projects:
+        namespace = project.namespace["name"]
+
         project = gl.projects.get(project.id)
-        log.debug("Project: {}".format(project))
-        builds_total.labels(project_id=project.id, project_name=project.name).set(len(project.builds.list()))
-        open_issues_total.labels(project_id=project.id, project_name=project.name).set(project.open_issues_count)
-        for pipeline in get_pipelines(project):
+        log.debug(
+            "Namespace: {} Project: {} {}".format(
+                namespace,
+                project.name,
+                project.id
+            )
+        )
+
+        pipelines = get_pipelines(project)
+        jobs = get_jobs(project)
+
+        jobs_total.labels(
+            namespace=namespace,
+            project_id=project.id,
+            project_name=project.name
+        ).set(len(jobs))
+
+        for pipeline in pipelines:
             try:
                 duration = get_duration(pipeline)
-                summary = pipeline_duration_seconds.labels(project_id=project.id, project_name=project.name, status=pipeline.status, ref=pipeline.ref)
+                summary = pipeline_duration_seconds.labels(
+                    namespace=namespace,
+                    project_id=project.id,
+                    project_name=project.name,
+                    status=pipeline.status,
+                    ref=pipeline.ref
+                )
                 summary.observe(duration.total_seconds())
             except AttributeError:
                 pass
-        for build in get_builds(project):
+        for job in jobs:
             try:
-                duration = get_duration(build)
-                summary = build_duration_seconds.labels(project_id=project.id, project_name=project.name, stage=build.stage, status=build.status, ref=pipeline.ref)
+                duration = get_duration(job)
+                summary = job_duration_seconds.labels(
+                    namespace=namespace,
+                    project_id=project.id,
+                    project_name=project.name,
+                    stage=job.stage,
+                    status=job.status,
+                    ref=pipeline.ref
+                )
                 summary.observe(duration.total_seconds())
             except AttributeError:
                 pass

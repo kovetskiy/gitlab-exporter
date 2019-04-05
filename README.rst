@@ -16,7 +16,7 @@ Run with Docker::
     -p 3001:3001 \
     -e URL=$YOUR_GITLAB_URL
     -e TOKEN=$YOUR_GITLAB_TOKEN
-    nomaster/gitlab-exporter
+    kovetskiy/gitlab-exporter
 
 Install from Git
 ----------------
@@ -76,4 +76,3 @@ For an omnibus install::
    /opt/gitlab/embedded/bin/redis-cli -s '/var/opt/gitlab/redis/redis.socket' del resque:gitlab:stat:failed
 
 http://stackoverflow.com/questions/15834911/how-do-i-reset-my-sidekiq-counters
-
